@@ -22,9 +22,11 @@ st.write("Extract insights, root causes, and actionable steps from emails.")
 
 # --- Authentication ---
 st.sidebar.header("User Authentication")
-auth_status = st.sidebar.session_state.get("auth_status", None)
 
-if auth_status != "authenticated":
+if "auth_status" not in st.session_state:
+    st.session_state["auth_status"] = None
+
+if st.session_state["auth_status"] != "authenticated":
     auth_choice = st.sidebar.radio("Login or Signup", ["Login", "Signup"])
     
     email = st.sidebar.text_input("Email")
@@ -36,26 +38,26 @@ if auth_status != "authenticated":
             if "error" not in res:
                 st.sidebar.success("Signup successful! Please login.")
             else:
-                st.sidebar.error("Signup failed: " + str(res["error"]))
-    
+                st.sidebar.error(f"Signup failed: {res['error']}")
+
     if auth_choice == "Login":
         if st.sidebar.button("Login"):
             res = supabase.auth.sign_in_with_password({"email": email, "password": password})
             if "error" not in res:
-                st.sidebar.session_state["auth_status"] = "authenticated"
-                st.sidebar.session_state["user"] = email
+                st.session_state["auth_status"] = "authenticated"
+                st.session_state["user"] = email
                 st.rerun()
             else:
-                st.sidebar.error("Login failed: " + str(res["error"]))
-    
+                st.sidebar.error(f"Login failed: {res['error']}")
+
     st.stop()
 
 if st.sidebar.button("Logout"):
     supabase.auth.sign_out()
-    st.sidebar.session_state["auth_status"] = None
+    st.session_state["auth_status"] = None
     st.rerun()
 
-st.sidebar.success(f"Logged in as {st.sidebar.session_state.get('user', 'Unknown')}")
+st.sidebar.success(f"Logged in as {st.session_state.get('user', 'Unknown')}")
 
 # --- Sidebar for Features ---
 st.sidebar.header("Settings")
@@ -82,7 +84,7 @@ def get_ai_response(prompt, email_content):
     try:
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content(prompt + email_content[:MAX_EMAIL_LENGTH])
-        return response.text.strip()
+        return response.text.strip() if response.text else "No response generated."
     except Exception as e:
         return f"Error: {e}"
 
